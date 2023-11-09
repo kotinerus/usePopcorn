@@ -15,7 +15,11 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState();
   const [selectedId, setSelectedId] = useState(null);
-  const [watched, setWatched] = useState([]);
+  // const [watched, setWatched] = useState([]);
+  const [watched, setWatched] = useState(function () {
+    const storedValue = localStorage.getItem("watched");
+    return JSON.parse(storedValue);
+  });
 
   function handleFilmClick(id) {
     setSelectedId(id);
@@ -24,21 +28,38 @@ export default function App() {
     setSelectedId(null);
   }
   function handleAddWatched(movie) {
-    console.log("test");
     const isNotInList = !(
       watched.filter((e) => e.imdbID === movie.imdbID).length > 0
     );
-    console.log(isNotInList);
     isNotInList && setWatched((watched) => [...watched, movie]);
+    // localStorage.setItem("watched", JSON.stringify([...watched, movie]));
+  }
+  function handleDeleteFilm(movie) {
+    setWatched(watched.filter((e) => e.imdbID !== movie.imdbID));
   }
   useEffect(
     function () {
+      localStorage.setItem("watched", JSON.stringify(watched));
+    },
+    [watched]
+  );
+  useEffect(function () {
+    document.addEventListener("keydown", function (e) {
+      if (e.code === "Escape") {
+        handleClose();
+      }
+    });
+  }, []);
+  useEffect(
+    function () {
+      const controler = new AbortController();
       async function fetchMovies() {
         try {
           setIsLoading(true);
           setError("");
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${API_KEY}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${API_KEY}&s=${query}`,
+            { signal: controler.signal }
           );
           if (!res.ok)
             throw new Error("Something went wrong with fetching movies");
@@ -48,7 +69,10 @@ export default function App() {
           setMovies(data.Search);
         } catch (err) {
           console.log(err.message);
-          setError(err.message);
+
+          if (err.name !== "AbortError") {
+            setError(err.message);
+          }
         } finally {
           setIsLoading(false);
         }
@@ -60,6 +84,10 @@ export default function App() {
         return;
       }
       fetchMovies();
+
+      return function () {
+        controler.abort();
+      };
     },
     [query]
   );
@@ -77,6 +105,7 @@ export default function App() {
         API_KEY={API_KEY}
         onAddWatched={handleAddWatched}
         watched={watched}
+        handleDeleteFilm={handleDeleteFilm}
       />
     </>
   );

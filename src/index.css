@@ -338,6 +338,11 @@ body {
   align-items: center;
   justify-content: center;
 }
+.deleteButton {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
 
 /*
 SPACING SYSTEM (px)
